@@ -1,29 +1,74 @@
+if exists('b:current_syntax')
+  let old_syntax = b:current_syntax
+  unlet b:current_syntax
+endif
 
-syntax match NearleyInclude '\v^\@builtin'
-syntax match NearleyInclude '\v^\@include'
-syntax match NearleyComment '\v#.*'
+if search('^@preprocessor typescript') != 0
+  syn include @typescript syntax/typescript.vim
+  unlet b:current_syntax
 
-syntax match NearleyOperator /\v\-\>/
-syntax match NearleyOperator /\v\|/
-syntax match NearleyOperator /\v\:\+/
-syntax match NearleyOperator /\v\:\*/
-syntax match NearleyOperator /\v\?/
+  let code_language = "typescript"
+else
+  syn include @javascript syntax/javascript.vim
+  unlet b:current_syntax
 
+  let code_language = "javascript"
+endif
 
-syntax match NearleyNonTerminal "\v^[a-zA-Z0-9_?+]+"
+syn match nearleyInclude    "^@include"
+syn match nearleyDirective  "^@builtin"
+syn match nearleyDirective  "^@preprocessor"
+syn match nearleyDirective  "^@lexer"
+syn match nearleyComment    "#.*"
 
-syntax region NearleyString start=/\v"/ skip=/\v\\./ end=/\v"/
-syntax region NearleyString start="\[" end="]"
+syn match nearleyNonTerminal "\(^@.*\)\@<![a-zA-Z0-9_?+]\+" nextgroup=nearleyMacroArgs
+syn match nearleyNonTerminal "^[a-zA-Z0-9_?+]\+" nextgroup=nearleyMacroParams
+syn match nearleyToken "%[a-zA-Z0-9_?+]\+"
+syn match nearleyMixin "$[a-zA-Z0-9_?+]\+"
 
-highlight link NearleyInclude Include
-highlight link NearleyComment Comment
-highlight link NearleyOperator Operator
-highlight link NearleyBuiltin Keyword
-highlight link NearleyString String
-highlight link NearleyNonTerminal Special
+syn match nearleyOperator "("
+syn match nearleyOperator ")"
+syn match nearleyOperator "->"
+syn match nearleyOperator "=>"
+syn match nearleyOperator "|"
+syn match nearleyOperator ","
+syn match nearleyOperator ":+"
+syn match nearleyOperator ":\*"
+syn match nearleyOperator ":?"
 
-syntax include @JavaScript syntax/javascript.vim
-syntax region javascriptPostProcessor start="{%" keepend end="%}" contains=@JavaScript
-syntax keyword NearleyBuiltin id joiner arrconcat nuller containedin=javascriptPostProcessor
-syntax region javascriptCode start="@{%" keepend end="%}" contains=@JavaScript
+syn match nearleyStringFlag "i" contained
+syn region nearleyString start=+"+ skip="\\." end=+"+ nextgroup=nearleyStringFlag
+syn region nearleyString start="`" skip="\\." end="`" nextgroup=nearleyStringFlag
+syn region nearleyString start="\[" end="\]"
 
+syn match nearleyMacroParam "[a-zA-Z0-9_?+]\+" contained
+syn region nearleyMacroArgs matchgroup=nearleyOperator start="\[" end="\]" contained contains=TOP
+syn region nearleyMacroParams matchgroup=nearleyOperator start="\[" end="\]" contained contains=nearleyMacroParam,nearleyOperator
+
+hi def link nearleyStringFlag   nearleyOperator
+hi def link nearleyMacroParam   nearleyMixin
+
+if code_language == "typescript"
+  syn region nearleyCodeBlock matchgroup=nealeyCodeQuote start=+@{%+ end=+%}+ contains=@typescript fold
+  syn region nearleyCodeBlockPost matchgroup=nealeyCodeQuote start=+{%+ end=+%}+ contains=@typescript fold
+else
+  syn region nearleyCodeBlock matchgroup=nealeyCodeQuote start=+@{%+ end=+%}+ contains=@javascript fold
+  syn region nearleyCodeBlockPost matchgroup=nealeyCodeQuote start=+{%+ end=+%}+ contains=@javascript fold
+endif
+
+syn keyword nearleyBuiltin id joiner arrconcat nuller containedin=nearleyCodeBlockPost
+
+hi def link nearleyInclude      Include
+hi def link nearleyDirective    Macro
+hi def link nearleyComment      Comment
+hi def link nearleyOperator     Operator
+hi def link nearleyBuiltin      Keyword
+hi def link nearleyString       String
+hi def link nearleyNonTerminal  Identifier
+hi def link nearleyToken        Constant
+hi def link nearleyMixin        PreProc
+hi def link nealeyCodeQuote     Operator
+
+if exists('old_syntax')
+  let b:current_syntax = old_syntax
+endif
